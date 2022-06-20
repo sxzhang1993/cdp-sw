@@ -1,6 +1,6 @@
 C = nvcc
 NVCCFLAGS = -arch=sm_70 
-CFLAGS = -std=c++11 -rdc=true -lcudavert
+CFLAGS = -std=c++11 -rdc=true -lcudadevrt
 
 all: align
 

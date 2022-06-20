@@ -121,7 +121,7 @@ __global__ void fill_gpu(float h[4097*4097], float d[4097*4097], char seqA[], ch
     i += (k - A_LEN);
   }
   int j = ((k) - i) + 1;
-  int id = i * 4097 + j; //SZZ value 
+  int id = i * 4097 + j; // SZZ value 
   // printf("round: %d\n", k);
   // printf("threadIdx.x: %d, blockDim.x: %d, blockIdx.x: %d\n i: %d\n", threadIdx.x, blockDim.x, blockIdx.x, k);
   // printf("threadIdx.x: %d, blockDim.x: %d, blockIdx.x: %d\n i: %d, j: %d\n id: %d\n", threadIdx.x, blockDim.x, blockIdx.x, i, j, id);
@@ -129,13 +129,13 @@ __global__ void fill_gpu(float h[4097*4097], float d[4097*4097], char seqA[], ch
   // printf("height: %d", h.height);
 
   // comparison positions
-  // int id = i * 4097 + j; //SZZ value
+ // int id = i * 4097 + j; //SZZ value
   int abov_id = (i - 1) * 4097 + j;       // above cell, 1
   int left_id = i * 4097 + (j - 1);       // left cell, 2
   int diag_id = (i - 1) * 4097 + (j - 1); // upper-left diagonal cell, 3
 
   // above cell
-//  tmp_score = 4097*4097[abov_id] + W;
+  tmp_score = h[abov_id] + W;
   //SZZ : tempoary diabled
   if (tmp_score > max_score) {
     max_score = tmp_score;
@@ -143,7 +143,7 @@ __global__ void fill_gpu(float h[4097*4097], float d[4097*4097], char seqA[], ch
   }
 
   // left cell
- // tmp_score = 4097*4097[left_id] + W;
+  tmp_score = h[left_id] + W;
   if (tmp_score > max_score) {
     max_score = tmp_score;
     direction = 2;
@@ -159,7 +159,7 @@ __global__ void fill_gpu(float h[4097*4097], float d[4097*4097], char seqA[], ch
   }
 
   // diagonal cell (preferred)
- // tmp_score = 4097*4097[diag_id] + sim_score;
+ tmp_score = h[diag_id] + sim_score;
   if (tmp_score >= max_score) {
     max_score = tmp_score;
     direction = 3;
@@ -167,8 +167,8 @@ __global__ void fill_gpu(float h[4097*4097], float d[4097*4097], char seqA[], ch
 
   // assign scores and direction
   // printf("id_check: %d\n", id);
- // h.elements[id] = max_score;
- // d.elements[id] = direction;
+  h[id] = max_score;
+  d[id] = direction;
 //SZZ: tempoary diableed
   // save max score and position
   if (max_score > max_id_val[1]) {
@@ -279,13 +279,13 @@ __global__ void cdprun(int const iSize, int iDepth, float h[(A_LEN+1)*(B_LEN+1)]
   //      d_d[sh][sw] = d[sh][sw];
 //}
 //SZZ: 2-d matrix [][] cannot use to fill_gpu?
-__shared__ float d_h[(A_LEN+1)*(B_LEN+1)];
+float d_h[(A_LEN+1)*(B_LEN+1)];
 	for (int zh = 0; zh < 4097; zh++){
     for (int zw = 0; zw < 4097; zw++)
         d_h[(A_LEN+1) * zh + zw] = h[(A_LEN+1) * zh + zw];
 }
 
-__shared__ float d_d[(A_LEN+1)*(B_LEN+1)];
+float d_d[(A_LEN+1)*(B_LEN+1)];
         for (int sh = 0; sh < 4097; sh++){
     for (int sw = 0; sw < 4097; sw++)
         d_h[(A_LEN+1) * sh + sw] = h[(A_LEN+1) * sh + sw];
@@ -350,14 +350,14 @@ __shared__ float d_d[(A_LEN+1)*(B_LEN+1)];
     if(diag_len / blks >= 1)  {
       dim3 dimBlock(diag_len / blks);
       dim3 dimGrid(blks);
-      fill_gpu<<<dimGrid, dimBlock>>>(d_h, d_d, d_seqA, d_seqB, i,
-                                    d_max_id_val);
+     // fill_gpu<<<dimGrid, dimBlock>>>(d_h, d_d, d_seqA, d_seqB, i,
+       //                             d_max_id_val);
     }
     else {
       dim3 dimBlock(diag_len);
       dim3 dimGrid(1);
-      fill_gpu<<<dimGrid, dimBlock>>>(d_h, d_d, d_seqA, d_seqB, i,
-                                    d_max_id_val);
+     // fill_gpu<<<dimGrid, dimBlock>>>(d_h, d_d, d_seqA, d_seqB, i,
+       //                             d_max_id_val);
     }
 
         cudaDeviceSynchronize();
@@ -404,8 +404,8 @@ void smith_water_gpu(Matrixsz h, Matrixsz d, char seqA[], char seqB[]) {
   // std::cout << "BLEN: "  << B_LEN << std::endl;
   Matrixsz d_h(A_LEN + 1, B_LEN + 1, Gpu);
   Matrixsz d_d(A_LEN + 1, B_LEN + 1, Gpu);
- // d_h.load(h, Gpu);
- // d_d.load(d, Gpu);
+ d_h.load(h, Gpu);
+ d_d.load(d, Gpu);
 
   // max id and value
   int *d_max_id_val;                   // create pointers and device
